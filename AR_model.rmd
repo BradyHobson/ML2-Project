@@ -1,0 +1,93 @@
+---
+title: "ML2 Final Project - Time Series Model"
+author: "Brady Hobson, Sara Kent"
+date: "2025-04-14"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r}
+# read in the lmp data
+lmp_df <- read.csv("lmp_data.csv", row.names = 1)
+head(lmp_df)
+```
+
+```{r}
+# keep only the interval local time and the lmp
+lmp_df <- lmp_df[, c("interval_end_local", "lmp")]
+head(lmp_df)
+```
+
+
+```{r}
+lmp_ts <- ts(lmp_df, frequency = 48)
+decomp <- decompose(lmp_ts, type = "additive")
+
+decomp_data <- data.frame(
+  time = time(decomp$x),
+  trend = decomp$trend,
+  seasonal = decomp$seasonal
+)
+
+pl <- ggplot(decomp_data, aes(x = time, y = trend)) + 
+  geom_line() + 
+  labs(title = "Trend Component of LMP", y = "Trend")
+
+p2 <- ggplot(decomp_data, aes(x=time, y=seasonal)) + 
+  geom_line() + 
+  labs(title = "Seasonal Component of LMP", y = "Seasonal")
+
+library(gridExtra)
+grid.arrange(pl, p2, ncol=2)
+```
+
+```{r}
+series <- ts(lmp_df$lmp)
+
+# acf and pacf plots
+acf(series, main="Bearswamp LMP ACF plot")
+pacf(series, main="Bearswamp LMP PACF plot")
+```
+
+```{r}
+#split into train and test sets
+train_size <- floor(0.8 * nrow(lmp_df))
+train_data <- lmp_df[1:train_size, ]
+test_data <- lmp_df[(train_size +1 ):nrow(lmp_df),]
+
+y_train <- train_data$lmp
+y_test <- test_data$lmp
+
+# number of lags to include in the model
+lags <- 12
+
+# create x and y matrices
+X <- embed(y_train, lags + 1)
+y <- X[, lags + 1] 
+
+# remove last column from X because it's current value
+X <- X[, -ncol(X)]
+
+# add intercept
+X <- cbind(1, X)
+
+# fit using OLS
+XTX <- t(X) %*% X 
+XTX_inv <- solve(XTX)
+XTy <- t(X) %*% y
+weights <- XTX_inv %*% XTy 
+
+# print coefficeints
+cat("AR model coefficients:\n")
+print(weights)
+
+
+
+```
+
+```{r}
+
+
+```
