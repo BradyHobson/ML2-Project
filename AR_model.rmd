@@ -28,6 +28,13 @@ acf(series, main="Bearswamp LMP ACF plot")
 pacf(series, main="Bearswamp LMP PACF plot")
 ```
 
+``` {r}
+# check if the data is stationary using an ADF test
+#install.packages("tseries")
+library(tseries)
+adf.test(lmp_df$lmp)
+```
+
 ```{r}
 #split into train and test sets
 train_size <- floor(0.8 * nrow(lmp_df))
@@ -38,12 +45,12 @@ y_train <- train_data$lmp
 y_test <- test_data$lmp
 
 # number of lags to include in the model
-lags <- 12
+lag <- 12
 
 # create x and y matrices
 # docs for embed: http://rdocumentation.org/packages/stats/versions/3.6.2/topics/embed
-X <- embed(y_train, lags + 1)
-y <- X[, lags + 1] 
+X <- embed(y_train, lag + 1)
+y <- X[, lag + 1] 
 
 # remove last column from X because it's current value
 X <- X[, -ncol(X)]
@@ -67,12 +74,12 @@ print(weights)
 test_predictions <- numeric(length(y_test))
 
 for (i in 1:length(y_test)) {
-  if (i <= 12) {
+  if (i <= lag) {
     # use lag from training set for the first predictions
-    lags <- tail(y_train, 12)[(12 - i + 1):12]
+    lags <- tail(y_train, lag)[(lag - i + 1):lag]
   } else {
     # otherwise use last predicted
-    lags <- test_predictions[(i - 12):(i - 1)]
+    lags <- test_predictions[(i - lag):(i - 1)]
   }
   # add bias term
   lags_with_bias <- c(1, lags)
